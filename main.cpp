@@ -1,18 +1,10 @@
-#include <iostream>
-#include <string>
 #include <format>
-
-#include <range/v3/algorithm/shuffle.hpp>
-#include <range/v3/view/chunk.hpp>
-#include <range/v3/view/concat.hpp>
-#include <range/v3/view/cycle.hpp>
-#include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/sample.hpp>
-#include <range/v3/to_container.hpp>
-#include <range/v3/view/take.hpp>
+#include <fstream>
+#include <string>
 
 #include <CLI/CLI.hpp>
 #include <openssl/rand.h>
+#include <range/v3/all.hpp>
 #include <spdlog/spdlog.h>
 
 namespace openssl {
@@ -50,12 +42,14 @@ int main(int argc, const char **argv) {
     int x{10};
     int y{10};
     int word{5};
+    std::string file;
 
     CLI::App app("portfolio");
 
     app.add_option("-x,-c,--columns", x, "Columns")->group("Size");
     app.add_option("-y,-r,--rows", y, "Rows")->group("Size");
     app.add_option("-w,--word", word, "Word size")->group("Size");
+    app.add_option("-o,--output-csv", file, "Output CSV file");
 
     spdlog::set_pattern("%v");
 
@@ -73,21 +67,29 @@ int main(int argc, const char **argv) {
     shuffle(buffer, openssl::rng{});
 
     std::string table{std::format("{:^{}}|", " ", 3)};
-    for (auto i = 0; i < x; ++i)
+    std::string csv{" ,"};
+
+    for (auto i = 0; i < x; ++i) {
         table += std::format("{:^{}}|", i, word + 2);
+        csv += std::format("{}{}", i, (i < (x - 1)) ? ',' : '\n');
+    }
 
     table += std::format("\n{:->{}}\n", "", (word + 3) * x + 4);
 
     for (auto &&[index, words] : views::enumerate(buffer | views::chunk(word) | views::chunk(x))) {
-        table += std::format("{:^{}}| ", index, 3);
+        auto v = words | to<std::vector<std::string_view>>();
 
-        for (auto word : words)
-            table += (word | ::ranges::to<std::string>()) + " | ";
-
-        table += '\n';
+        table += std::format("{:^{}}| {} |\n", index, 3, v | views::join(" | ") | to<std::string>());
+        csv += std::format("{},{}\n", index, (v | views::join(',') | ::ranges::to<std::string>()));
     }
 
     table += std::format("{:->{}}\n", "", (word + 3) * x + 4);
     spdlog::info(table);
+
+    if (!file.empty()) {
+        std::ofstream output(file);
+        output << csv;
+    }
+
     return 0;
 }
