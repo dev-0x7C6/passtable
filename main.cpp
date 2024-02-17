@@ -55,7 +55,9 @@ int main(int argc, const char **argv) {
 
     app.add_option("-x,-c,--columns", x, "Columns")->group("Size");
     app.add_option("-y,-r,--rows", y, "Rows")->group("Size");
-    app.add_option("-w,--word", y, "Word size")->group("Size");
+    app.add_option("-w,--word", word, "Word size")->group("Size");
+
+    spdlog::set_pattern("%v");
 
     try {
         app.parse(argc, argv);
@@ -70,22 +72,22 @@ int main(int argc, const char **argv) {
     auto buffer = query::us::keys() | views::cycle | views::take(size) | to<std::string>();
     shuffle(buffer, openssl::rng{});
 
-    std::cout << std::format("{:^{}}|", " ", 3);
+    std::string table{std::format("{:^{}}|", " ", 3)};
     for (auto i = 0; i < x; ++i)
-        std::cout << std::format("{:^{}}|", i, word + 2);
+        table += std::format("{:^{}}|", i, word + 2);
 
-    std::cout << std::endl;
-    std::cout << std::format("{:->{}}", "", word * x + static_cast<int>(x * 3.49)) << std::endl;
+    table += std::format("\n{:->{}}\n", "", (word + 3) * x + 4);
 
     for (auto &&[index, words] : views::enumerate(buffer | views::chunk(word) | views::chunk(x))) {
-        std::cout << std::format("{:^{}}| ", index, 3);
+        table += std::format("{:^{}}| ", index, 3);
 
         for (auto word : words)
-            std::cout << (word | ::ranges::to<std::string>()) << " | ";
+            table += (word | ::ranges::to<std::string>()) + " | ";
 
-        std::cout << std::endl;
+        table += '\n';
     }
 
-    std::cout << std::format("{:->{}}", "", word * x + static_cast<int>(x * 3.49)) << std::endl;
+    table += std::format("{:->{}}\n", "", (word + 3) * x + 4);
+    spdlog::info(table);
     return 0;
 }
