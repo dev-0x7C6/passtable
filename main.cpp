@@ -44,7 +44,7 @@ int main(int argc, const char **argv) {
     int word{5};
     std::string file;
 
-    CLI::App app("portfolio");
+    CLI::App app("passtable");
 
     app.add_option("-x,-c,--columns", x, "Columns")->group("Size");
     app.add_option("-y,-r,--rows", y, "Rows")->group("Size");
